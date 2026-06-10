@@ -145,6 +145,7 @@ jobs:
           unzip -l dist/obs-rtmp-receiver-macos-arm64.zip
 
       - name: Upload workflow artifact
+        id: artifact
         uses: actions/upload-artifact@v6
         with:
           name: obs-rtmp-receiver-macos-arm64
@@ -160,10 +161,35 @@ jobs:
           TITLE="Latest Apple Silicon OBS RTMP Receiver Plugin"
           NOTES="Download obs-rtmp-receiver-macos-arm64.zip below, unzip it, and follow INSTALL.txt. This build is for Apple Silicon Macs only (M1/M2/M3/M4)."
 
+          # Keep the reusable release tag pointed at the commit that produced the
+          # current binary, then publish the release as the repository's latest
+          # release so it appears prominently on the GitHub Releases page.
+          git tag --force "$TAG" "$GITHUB_SHA"
+          git push --force origin "refs/tags/$TAG"
+
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease --latest=false
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" --latest
           else
-            gh release create "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease --latest=false
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" --latest
           fi
 
           gh release upload "$TAG" dist/obs-rtmp-receiver-macos-arm64.zip --clobber
+
+      - name: Print download links
+        env:
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          RELEASE_URL="${{ github.server_url }}/${{ github.repository }}/releases/tag/apple-silicon-latest"
+          {
+            echo "## Plugin download"
+            echo
+            echo "Release page: $RELEASE_URL"
+            echo
+            echo "Workflow artifact: $ARTIFACT_URL"
+            echo
+            echo "Download the release asset named \`obs-rtmp-receiver-macos-arm64.zip\`, unzip it, and follow \`INSTALL.txt\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Release page: $RELEASE_URL"
+          echo "Workflow artifact: $ARTIFACT_URL"
