@@ -1,0 +1,51 @@
+name: Build downloadable OBS plugin
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  linux-x86_64:
+    name: Linux x86_64 plugin ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install OBS build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ ninja-build libobs-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PWD/package-root"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Install into package folder
+        run: cmake --install build --config Release
+
+      - name: Package downloadable ZIP
+        run: python3 scripts/package_plugin.py --package-root package-root --output-dir dist --platform linux-x86_64
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-rtmp-receiver-linux-x86_64
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Attach ZIP to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip

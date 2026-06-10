@@ -12,6 +12,11 @@ The plugin creates a source named **RTMP Receiver (FFmpeg)**. When the source be
 - Receives the outside feed in OBS so you can mix it into scenes and stream onward to social channels.
 - Uses only free/open-source components: OBS Studio and FFmpeg.
 
+## Downloadable plugin ZIP
+
+This repository includes a GitHub Actions workflow that builds a downloadable plugin ZIP. If you do not want to compile anything yourself, open the repository on GitHub, go to **Actions**, run or open **Build downloadable OBS plugin**, and download the artifact from a successful run.
+
+Step-by-step download instructions are in [`docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md`](docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md).
 
 ## New to plugins or coding?
 
