@@ -68,16 +68,8 @@ jobs:
             exit 1
           fi
 
-          LIBOBS_HEADERS="$LIBOBS_FRAMEWORK/Headers"
-          if [ ! -f "$LIBOBS_HEADERS/obsconfig.h" ]; then
-            echo "Could not find generated OBS config header at $LIBOBS_HEADERS/obsconfig.h" >&2
-            find "$LIBOBS_FRAMEWORK" -maxdepth 4 -name obsconfig.h -print >&2 || true
-            exit 1
-          fi
-
           echo "version=$OBS_VERSION" >> "$GITHUB_OUTPUT"
           echo "library=$LIBOBS_BINARY" >> "$GITHUB_OUTPUT"
-          echo "framework_headers=$LIBOBS_HEADERS" >> "$GITHUB_OUTPUT"
 
       - name: Download matching OBS headers
         id: headers
@@ -106,18 +98,12 @@ jobs:
             exit 1
           fi
 
-          FRAMEWORK_HEADERS="${{ steps.obs.outputs.framework_headers }}"
-          if [ ! -f "$FRAMEWORK_HEADERS/obsconfig.h" ]; then
-            echo "OBS framework headers do not contain obsconfig.h at $FRAMEWORK_HEADERS" >&2
-            exit 1
-          fi
-
-          # libobs/obs-config.h includes the generated obsconfig.h header, which
-          # is not present in the OBS source archive. Put the installed framework
-          # headers first so the build can use OBS' generated configuration, then
-          # keep the downloaded source headers as a fallback for any non-generated
-          # headers that are not shipped in the framework bundle.
-          echo "include_dir=$FRAMEWORK_HEADERS;$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
+          # Homebrew's OBS.app is enough for the libobs binary, but it is not a
+          # complete plugin-development SDK and may omit generated headers such
+          # as obsconfig.h. Build against the matching source headers instead;
+          # obs-config.h has safe fallback values when HAVE_OBSCONFIG_H is not
+          # defined for this external plugin target.
+          echo "include_dir=$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
           echo "simde_include_dir=$SIMDE_INCLUDE_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Configure Apple Silicon build
