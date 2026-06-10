@@ -12,6 +12,21 @@ set(LIBOBS_INCLUDE_DIR "" CACHE STRING "Semicolon-separated paths to OBS/libobs 
 set(LIBOBS_LIBRARY "" CACHE FILEPATH "Path to the libobs library or framework binary")
 set(SIMDE_INCLUDE_DIR "" CACHE PATH "Path to SIMDe headers containing simde/x86/sse2.h; needed by recent OBS/libobs headers on Apple Silicon")
 
+set(OBS_VERSION "unknown" CACHE STRING "OBS version used for generated libobs compatibility headers")
+set(OBS_DATA_PATH "../../data" CACHE STRING "OBS data path used for generated libobs compatibility headers")
+set(OBS_INSTALL_PREFIX "" CACHE STRING "OBS install prefix used for generated libobs compatibility headers")
+set(OBS_PLUGIN_PATH "obs-plugins" CACHE STRING "OBS plugin path used for generated libobs compatibility headers")
+set(OBS_PLUGIN_DESTINATION "obs-plugins" CACHE STRING "OBS plugin install destination used for generated libobs compatibility headers")
+set(OBS_RELATIVE_PREFIX "../../" CACHE STRING "OBS relative prefix used for generated libobs compatibility headers")
+set(OBS_RELEASE_CANDIDATE 0 CACHE STRING "OBS release candidate flag used for generated libobs compatibility headers")
+set(OBS_BETA 0 CACHE STRING "OBS beta flag used for generated libobs compatibility headers")
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/obsconfig.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/generated/libobs/obsconfig.h"
+  @ONLY
+)
+
 add_library(obs-rtmp-receiver MODULE
   src/plugin-main.cpp
 )
@@ -39,7 +54,10 @@ if(LIBOBS_INCLUDE_DIR AND LIBOBS_LIBRARY)
     endif()
   endforeach()
 
-  target_include_directories(obs-rtmp-receiver PRIVATE ${LIBOBS_INCLUDE_DIR})
+  target_include_directories(obs-rtmp-receiver PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/libobs"
+    ${LIBOBS_INCLUDE_DIR}
+  )
   target_link_libraries(obs-rtmp-receiver PRIVATE "${LIBOBS_LIBRARY}")
 else()
   find_package(libobs QUIET)

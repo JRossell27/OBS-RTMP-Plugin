@@ -99,10 +99,9 @@ jobs:
           fi
 
           # Homebrew's OBS.app is enough for the libobs binary, but it is not a
-          # complete plugin-development SDK and may omit generated headers such
-          # as obsconfig.h. Build against the matching source headers instead;
-          # obs-config.h has safe fallback values when HAVE_OBSCONFIG_H is not
-          # defined for this external plugin target.
+          # complete plugin-development SDK. The downloaded source headers can
+          # also omit generated build headers such as obsconfig.h, so CMake
+          # creates a minimal compatibility header for this external plugin.
           echo "include_dir=$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
           echo "simde_include_dir=$SIMDE_INCLUDE_DIR" >> "$GITHUB_OUTPUT"
 
@@ -116,7 +115,8 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$PWD/package-root" \
             -DLIBOBS_INCLUDE_DIR="${{ steps.headers.outputs.include_dir }}" \
             -DLIBOBS_LIBRARY="${{ steps.obs.outputs.library }}" \
-            -DSIMDE_INCLUDE_DIR="${{ steps.headers.outputs.simde_include_dir }}"
+            -DSIMDE_INCLUDE_DIR="${{ steps.headers.outputs.simde_include_dir }}" \
+            -DOBS_VERSION="${{ steps.obs.outputs.version }}"
 
       - name: Build plugin
         run: cmake --build build --config Release
