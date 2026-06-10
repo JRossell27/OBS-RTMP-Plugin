@@ -9,15 +9,19 @@ import shutil
 import zipfile
 
 PLUGIN_NAME = "obs-rtmp-receiver"
+PLUGIN_SUFFIXES = (".plugin", ".so", ".dll", ".dylib")
 
 
 def find_plugin_binary(package_root: Path) -> Path:
-    candidates = []
-    for suffix in (".plugin", ".so", ".dll", ".dylib"):
-    for suffix in (".so", ".dll", ".dylib"):
+    candidates: list[Path] = []
+    for suffix in PLUGIN_SUFFIXES:
         candidates.extend(package_root.rglob(f"{PLUGIN_NAME}{suffix}"))
+
     if not candidates:
         raise SystemExit(f"Could not find a built {PLUGIN_NAME} plugin binary under {package_root}")
+
+    # Prefer bundle directories (macOS .plugin) over files if both are present.
+    candidates.sort(key=lambda path: (path.suffix != ".plugin", str(path)))
     return candidates[0]
 
 
@@ -43,14 +47,6 @@ def install_instructions(platform: str) -> str:
 """
 
     return """INSTALL ON LINUX
-def write_install_notes(staging_root: Path, platform: str) -> None:
-    notes = f"""OBS RTMP Receiver Plugin ({platform})
-
-WHAT THIS ZIP IS
-This ZIP contains the compiled OBS plugin binary created by GitHub Actions.
-It still requires FFmpeg to be installed on the computer running OBS.
-
-INSTALL ON LINUX
 1. Close OBS.
 2. Open this ZIP. It contains an `obs-rtmp-receiver` folder.
 3. Copy that whole `obs-rtmp-receiver` folder to:
@@ -70,7 +66,6 @@ This ZIP contains the compiled OBS plugin binary created by GitHub Actions.
 It still requires FFmpeg to be installed on the computer running OBS.
 
 {install_instructions(platform)}
-
 IMPORTANT
 - If OBS does not show the source, check OBS logs for missing libraries.
 - The plugin starts FFmpeg for you, but FFmpeg must be installed and available as `ffmpeg` on PATH, or configured in the source properties.
@@ -89,6 +84,27 @@ def make_zip(source_dir: Path, zip_path: Path) -> None:
                 archive.write(path, path.relative_to(source_dir))
 
 
+def copy_plugin(plugin_binary: Path, binary_destination: Path) -> None:
+    binary_destination.parent.mkdir(parents=True, exist_ok=True)
+    if plugin_binary.is_dir():
+        if binary_destination.exists():
+            shutil.rmtree(binary_destination)
+        shutil.copytree(plugin_binary, binary_destination)
+    else:
+        shutil.copy2(plugin_binary, binary_destination)
+
+
+def plugin_destination(staging_root: Path, plugin_binary: Path) -> Path:
+    # Package in OBS's per-user plugin layout:
+    #   macOS: <plugin-name>/bin/<plugin>.plugin
+    #   Linux/Windows: <plugin-name>/bin/64bit/<binary>
+    if plugin_binary.suffix == ".plugin":
+        return staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
+    if plugin_binary.suffix in {".so", ".dll"}:
+        return staging_root / PLUGIN_NAME / "bin" / "64bit" / plugin_binary.name
+    return staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--package-root", required=True, type=Path)
@@ -105,35 +121,13 @@ def main() -> None:
     staging_root.mkdir(parents=True)
 
     plugin_binary = find_plugin_binary(package_root)
-    plugin_suffix = plugin_binary.suffix
-
-    # Package in OBS's per-user plugin layout:
-    #   macOS: <plugin-name>/bin/<plugin>.plugin
-    #   Linux/Windows: <plugin-name>/bin/64bit/<binary>
-    if plugin_suffix == ".plugin":
-        binary_destination = staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
-    elif plugin_suffix in {".so", ".dll"}:
-    #   <plugin-name>/bin/64bit/<binary>
-    if plugin_suffix in {".so", ".dll"}:
-        binary_destination = staging_root / PLUGIN_NAME / "bin" / "64bit" / plugin_binary.name
-    else:
-        binary_destination = staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
-
-    binary_destination.parent.mkdir(parents=True, exist_ok=True)
-    if plugin_binary.is_dir():
-        shutil.copytree(plugin_binary, binary_destination)
-    else:
-        shutil.copy2(plugin_binary, binary_destination)
+    copy_plugin(plugin_binary, plugin_destination(staging_root, plugin_binary))
 
     copy_if_exists(Path("README.md"), staging_root / "README.md")
+    copy_if_exists(Path("LICENSE"), staging_root / "LICENSE")
     copy_if_exists(Path("docs/NON_CODER_SETUP.md"), staging_root / "docs" / "NON_CODER_SETUP.md")
     copy_if_exists(Path("docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md"), staging_root / "docs" / "DOWNLOAD_PLUGIN_FROM_GITHUB.md")
     copy_if_exists(Path("docs/MAC_APPLE_SILICON_INSTALL.md"), staging_root / "docs" / "MAC_APPLE_SILICON_INSTALL.md")
-    shutil.copy2(plugin_binary, binary_destination)
-
-    copy_if_exists(Path("README.md"), staging_root / "README.md")
-    copy_if_exists(Path("docs/NON_CODER_SETUP.md"), staging_root / "docs" / "NON_CODER_SETUP.md")
-    copy_if_exists(Path("LICENSE"), staging_root / "LICENSE")
     write_install_notes(staging_root, args.platform)
 
     zip_path = output_dir / f"{PLUGIN_NAME}-{args.platform}.zip"
