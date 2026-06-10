@@ -18,11 +18,15 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install CMake, Ninja, and OBS
         run: |
           set -euo pipefail
+          # GitHub macOS runners currently include several pre-tapped third-party
+          # repositories that are unrelated to this build. Remove them before
+          # installing anything so Homebrew tap-trust checks cannot fail the job.
+          brew untap aws/tap azure/bicep || true
           brew install cmake ninja
           brew install --cask obs
 
@@ -115,7 +119,7 @@ jobs:
           unzip -l dist/obs-rtmp-receiver-macos-arm64.zip
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: obs-rtmp-receiver-macos-arm64
           path: dist/obs-rtmp-receiver-macos-arm64.zip
