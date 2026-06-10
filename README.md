@@ -14,6 +14,9 @@ The plugin creates a source named **RTMP Receiver (FFmpeg)**. When the source be
 
 ## Downloadable plugin ZIP
 
+This repository includes a GitHub Actions workflow that builds downloadable plugin ZIPs for Linux and Apple Silicon Macs. If you do not want to compile anything yourself, open the repository on GitHub, go to **Actions**, run or open **Build downloadable OBS plugin**, and download the artifact from a successful run.
+
+For an M1/M2/M3/M4 Mac, download `obs-rtmp-receiver-macos-arm64` and follow [`docs/MAC_APPLE_SILICON_INSTALL.md`](docs/MAC_APPLE_SILICON_INSTALL.md). General step-by-step download instructions are in [`docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md`](docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md).
 This repository includes a GitHub Actions workflow that builds a downloadable plugin ZIP. If you do not want to compile anything yourself, open the repository on GitHub, go to **Actions**, run or open **Build downloadable OBS plugin**, and download the artifact from a successful run.
 
 Step-by-step download instructions are in [`docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md`](docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md).

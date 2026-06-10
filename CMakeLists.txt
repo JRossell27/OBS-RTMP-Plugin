@@ -8,6 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 
+set(LIBOBS_INCLUDE_DIR "" CACHE PATH "Path to OBS/libobs headers, for example OBS.app/Contents/Frameworks/libobs.framework/Headers")
+set(LIBOBS_LIBRARY "" CACHE FILEPATH "Path to the libobs library or framework binary")
+
+find_package(libobs QUIET)
 find_package(libobs QUIET)
 find_package(libobs REQUIRED)
 
@@ -15,6 +19,10 @@ add_library(obs-rtmp-receiver MODULE
   src/plugin-main.cpp
 )
 
+if(LIBOBS_INCLUDE_DIR AND LIBOBS_LIBRARY)
+  target_include_directories(obs-rtmp-receiver PRIVATE "${LIBOBS_INCLUDE_DIR}")
+  target_link_libraries(obs-rtmp-receiver PRIVATE "${LIBOBS_LIBRARY}")
+elseif(TARGET OBS::libobs)
 if(TARGET OBS::libobs)
   target_link_libraries(obs-rtmp-receiver PRIVATE OBS::libobs)
 elseif(TARGET libobs::libobs)
@@ -37,6 +45,16 @@ set_target_properties(obs-rtmp-receiver PROPERTIES
   OUTPUT_NAME "obs-rtmp-receiver"
 )
 
+if(APPLE)
+  set_target_properties(obs-rtmp-receiver PROPERTIES
+    BUNDLE TRUE
+    BUNDLE_EXTENSION "plugin"
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos/Info.plist.in"
+  )
+endif()
+
+install(TARGETS obs-rtmp-receiver
+  BUNDLE DESTINATION "${CMAKE_INSTALL_LIBDIR}/obs-plugins"
 install(TARGETS obs-rtmp-receiver
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/obs-plugins"
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/obs-plugins"

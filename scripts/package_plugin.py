@@ -13,6 +13,7 @@ PLUGIN_NAME = "obs-rtmp-receiver"
 
 def find_plugin_binary(package_root: Path) -> Path:
     candidates = []
+    for suffix in (".plugin", ".so", ".dll", ".dylib"):
     for suffix in (".so", ".dll", ".dylib"):
         candidates.extend(package_root.rglob(f"{PLUGIN_NAME}{suffix}"))
     if not candidates:
@@ -26,6 +27,22 @@ def copy_if_exists(source: Path, destination: Path) -> None:
         shutil.copy2(source, destination)
 
 
+def install_instructions(platform: str) -> str:
+    if platform == "macos-arm64":
+        return """INSTALL ON MAC (APPLE SILICON / M1-M4)
+1. Close OBS.
+2. Open this ZIP. It contains an `obs-rtmp-receiver` folder.
+3. In Finder, press Shift+Command+G and paste:
+   ~/Library/Application Support/obs-studio/plugins/
+4. If the `plugins` folder does not exist, create it.
+5. Copy the whole `obs-rtmp-receiver` folder into that `plugins` folder.
+6. The final plugin bundle should be here:
+   ~/Library/Application Support/obs-studio/plugins/obs-rtmp-receiver/bin/obs-rtmp-receiver.plugin
+7. Reopen OBS.
+8. Add a source named "RTMP Receiver (FFmpeg)".
+"""
+
+    return """INSTALL ON LINUX
 def write_install_notes(staging_root: Path, platform: str) -> None:
     notes = f"""OBS RTMP Receiver Plugin ({platform})
 
@@ -42,6 +59,17 @@ INSTALL ON LINUX
    ~/.config/obs-studio/plugins/obs-rtmp-receiver/bin/64bit/obs-rtmp-receiver.so
 5. Reopen OBS.
 6. Add a source named "RTMP Receiver (FFmpeg)".
+"""
+
+
+def write_install_notes(staging_root: Path, platform: str) -> None:
+    notes = f"""OBS RTMP Receiver Plugin ({platform})
+
+WHAT THIS ZIP IS
+This ZIP contains the compiled OBS plugin binary created by GitHub Actions.
+It still requires FFmpeg to be installed on the computer running OBS.
+
+{install_instructions(platform)}
 
 IMPORTANT
 - If OBS does not show the source, check OBS logs for missing libraries.
@@ -80,6 +108,11 @@ def main() -> None:
     plugin_suffix = plugin_binary.suffix
 
     # Package in OBS's per-user plugin layout:
+    #   macOS: <plugin-name>/bin/<plugin>.plugin
+    #   Linux/Windows: <plugin-name>/bin/64bit/<binary>
+    if plugin_suffix == ".plugin":
+        binary_destination = staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
+    elif plugin_suffix in {".so", ".dll"}:
     #   <plugin-name>/bin/64bit/<binary>
     if plugin_suffix in {".so", ".dll"}:
         binary_destination = staging_root / PLUGIN_NAME / "bin" / "64bit" / plugin_binary.name
@@ -87,6 +120,14 @@ def main() -> None:
         binary_destination = staging_root / PLUGIN_NAME / "bin" / plugin_binary.name
 
     binary_destination.parent.mkdir(parents=True, exist_ok=True)
+    if plugin_binary.is_dir():
+        shutil.copytree(plugin_binary, binary_destination)
+    else:
+        shutil.copy2(plugin_binary, binary_destination)
+
+    copy_if_exists(Path("README.md"), staging_root / "README.md")
+    copy_if_exists(Path("docs/NON_CODER_SETUP.md"), staging_root / "docs" / "NON_CODER_SETUP.md")
+    copy_if_exists(Path("docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md"), staging_root / "docs" / "DOWNLOAD_PLUGIN_FROM_GITHUB.md")
     shutil.copy2(plugin_binary, binary_destination)
 
     copy_if_exists(Path("README.md"), staging_root / "README.md")
