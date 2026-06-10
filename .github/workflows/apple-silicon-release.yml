@@ -28,7 +28,7 @@ jobs:
           # third-party repositories. Avoid `brew untap` here: Homebrew refuses to
           # untap repositories that own installed packages (for example bicep from
           # azure/bicep), and that refusal is surfaced as a workflow error.
-          for formula in cmake ninja; do
+          for formula in cmake ninja simde; do
             if brew list --formula "$formula" >/dev/null 2>&1; then
               echo "$formula is already installed; skipping brew install."
             else
@@ -91,7 +91,15 @@ jobs:
             exit 1
           fi
 
+          SIMDE_INCLUDE_DIR="$(brew --prefix simde)/include"
+          if [ ! -f "$SIMDE_INCLUDE_DIR/simde/x86/sse2.h" ]; then
+            echo "Homebrew SIMDe headers were not found at $SIMDE_INCLUDE_DIR" >&2
+            find "$(brew --prefix simde)" -maxdepth 4 -path '*/simde/x86/sse2.h' -print >&2 || true
+            exit 1
+          fi
+
           echo "include_dir=$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
+          echo "simde_include_dir=$SIMDE_INCLUDE_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Configure Apple Silicon build
         run: |
@@ -102,7 +110,8 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DCMAKE_INSTALL_PREFIX="$PWD/package-root" \
             -DLIBOBS_INCLUDE_DIR="${{ steps.headers.outputs.include_dir }}" \
-            -DLIBOBS_LIBRARY="${{ steps.obs.outputs.library }}"
+            -DLIBOBS_LIBRARY="${{ steps.obs.outputs.library }}" \
+            -DSIMDE_INCLUDE_DIR="${{ steps.headers.outputs.simde_include_dir }}"
 
       - name: Build plugin
         run: cmake --build build --config Release
