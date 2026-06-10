@@ -11,6 +11,7 @@ Use this guide if your Mac has an Apple Silicon chip, such as an M1, M2, M3, or 
 5. Unzip the downloaded file.
 6. Open `INSTALL.txt` inside the ZIP and follow it.
 
+If the release is not there yet, click **Actions**, run **Apple Silicon Plugin Release**, wait for the green check mark, and then return to **Releases**.
 If the release is not there yet, click **Actions**, run **Build Mac Apple Silicon OBS plugin**, wait for the green check mark, and then return to **Releases**.
 2. Click **Actions**.
 3. Click **Build downloadable OBS plugin**.

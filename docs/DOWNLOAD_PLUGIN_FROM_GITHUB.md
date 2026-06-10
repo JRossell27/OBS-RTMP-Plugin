@@ -11,6 +11,7 @@ This repository now includes a GitHub Actions workflow that builds a downloadabl
 5. Unzip the downloaded file.
 6. Follow the `INSTALL.txt` file inside the ZIP.
 
+If you do not see the release yet, click the **Actions** tab, run **Apple Silicon Plugin Release**, wait for the green check mark, then return to **Releases**. The workflow publishes the ZIP there automatically.
 If you do not see the release yet, click the **Actions** tab, run **Build Mac Apple Silicon OBS plugin**, wait for the green check mark, then return to **Releases**. The workflow publishes the ZIP there automatically.
 
 ## Important limitations
