@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(GNUInstallDirs)
 
 find_package(libobs QUIET)
+find_package(libobs REQUIRED)
 
 add_library(obs-rtmp-receiver MODULE
   src/plugin-main.cpp
@@ -22,6 +23,8 @@ else()
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(LIBOBS REQUIRED IMPORTED_TARGET libobs)
   target_link_libraries(obs-rtmp-receiver PRIVATE PkgConfig::LIBOBS)
+else()
+  target_link_libraries(obs-rtmp-receiver PRIVATE libobs::libobs)
 endif()
 
 target_compile_definitions(obs-rtmp-receiver PRIVATE
