@@ -11,14 +11,7 @@ Use this guide if your Mac has an Apple Silicon chip, such as an M1, M2, M3, or 
 5. Unzip the downloaded file.
 6. Open `INSTALL.txt` inside the ZIP and follow it.
 
-If the release is not there yet, click **Actions**, run **Apple Silicon Plugin Release**, wait for the green check mark, and then return to **Releases**.
-If the release is not there yet, click **Actions**, run **Build Mac Apple Silicon OBS plugin**, wait for the green check mark, and then return to **Releases**.
-2. Click **Actions**.
-3. Click **Build downloadable OBS plugin**.
-4. Open the newest successful run with a green check mark.
-5. Under **Artifacts**, download `obs-rtmp-receiver-macos-arm64`.
-6. Unzip the downloaded file.
-7. Open `INSTALL.txt` inside the ZIP and follow it.
+If the release is not there yet, click **Actions**, run **Apple Silicon Plugin Release**, wait for the green check mark, and then return to **Releases**. You can also open the newest successful workflow run and download the `obs-rtmp-receiver-macos-arm64` artifact from that run.
 
 ## Install the plugin on your Mac
 
@@ -51,10 +44,17 @@ If OBS shows this startup warning:
 The following OBS plugins failed to load:
 
 obs-rtmp-receiver
-obs-rtmp-receiver
 ```
 
-Start by removing duplicate copies. Seeing the same plugin name twice usually means OBS found more than one installed copy, such as one copy in your user plugin folder and another copy inside the OBS app/plugin folder, or an accidentally nested duplicate from unzipping/copying more than once.
+First, open **Help** → **Log Files** → **View Current Log** and search for `obs-rtmp-receiver`. If the nearby log line says something like this:
+
+```text
+Module '.../obs-rtmp-receiver' compiled with newer libobs 32.1
+```
+
+then your installed plugin ZIP was built against a newer OBS/libobs SDK than the OBS app you are running. OBS 32.0.4 will not load a plugin built against OBS 32.1. Download the newest plugin ZIP from this repository's **Latest Apple Silicon OBS RTMP Receiver Plugin** release, because the release workflow now builds against OBS 32.0.4 for compatibility with OBS 32.0.x.
+
+If the warning lists `obs-rtmp-receiver` twice, start by removing duplicate copies. Seeing the same plugin name twice usually means OBS found more than one installed copy, such as one copy in your user plugin folder and another copy inside the OBS app/plugin folder, or an accidentally nested duplicate from unzipping/copying more than once.
 
 1. Close OBS.
 2. In Finder, press **Shift+Command+G** and inspect this folder:
@@ -76,7 +76,7 @@ Start by removing duplicate copies. Seeing the same plugin name twice usually me
 ```
 
 5. If you also copied `obs-rtmp-receiver.plugin` into OBS.app itself, remove that extra copy and use the per-user plugin folder above instead.
-6. Reopen OBS and check **Help** → **Log Files** → **View Current Log**. Search the log for `obs-rtmp-receiver`; the lines near that name usually say whether macOS blocked the plugin, the architecture is wrong, or a linked library could not be loaded.
+6. Reopen OBS and check **Help** → **Log Files** → **View Current Log**. Search the log for `obs-rtmp-receiver`; the lines near that name usually say whether the plugin was built for a newer OBS/libobs version, macOS blocked the plugin, the architecture is wrong, or a linked library could not be loaded.
 
 Other common causes:
 

@@ -14,9 +14,9 @@ The plugin creates a source named **RTMP Receiver (FFmpeg)**. When the source be
 
 ## Downloadable plugin ZIP
 
-This repository now focuses on Apple Silicon Macs. The GitHub Actions workflow builds `obs-rtmp-receiver-macos-arm64.zip` and publishes it to the repository **Releases** page so you can download it like a normal app/plugin.
+This repository now focuses on Apple Silicon Macs. The GitHub Actions workflow builds `obs-rtmp-receiver-macos-arm64.zip` and publishes it to the repository **Releases** page so you can download it like a normal app/plugin. The release workflow pins the OBS SDK to OBS 32.0.4 so OBS 32.0.x users do not get blocked by OBS's newer-libobs plugin check.
 
-You do **not** need to put a copy of OBS inside this repository. The GitHub Actions runner installs OBS only as a build-time dependency so the plugin can link against OBS' `libobs` binary; the downloadable ZIP contains this plugin, not a bundled OBS app. On your Mac, you keep using your existing OBS installation and install the built `.plugin` bundle into OBS.
+You do **not** need to put a copy of OBS inside this repository. The GitHub Actions runner downloads a pinned OBS app only as a build-time SDK so the plugin can link against that version's `libobs` binary; the downloadable ZIP contains this plugin, not a bundled OBS app. On your Mac, you keep using your existing OBS installation and install the built `.plugin` bundle into OBS.
 
 For an M1/M2/M3/M4 Mac, download `obs-rtmp-receiver-macos-arm64.zip` from **Releases** and follow [`docs/MAC_APPLE_SILICON_INSTALL.md`](docs/MAC_APPLE_SILICON_INSTALL.md). General step-by-step download instructions are in [`docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md`](docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md).
 

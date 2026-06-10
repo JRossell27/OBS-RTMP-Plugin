@@ -67,6 +67,7 @@ It still requires FFmpeg to be installed on the computer running OBS.
 
 {install_instructions(platform)}
 IMPORTANT
+- If OBS says the plugin was compiled with newer libobs 32.1, replace it with the newest ZIP from this repository. The release build targets OBS 32.0.4 so OBS 32.0.x can load it.
 - If OBS does not show the source, check OBS logs for missing libraries.
 - If OBS says `obs-rtmp-receiver` failed to load twice, close OBS and remove duplicate installed copies. Keep only:
   ~/Library/Application Support/obs-studio/plugins/obs-rtmp-receiver/bin/obs-rtmp-receiver.plugin
