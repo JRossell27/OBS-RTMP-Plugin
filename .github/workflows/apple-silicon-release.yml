@@ -168,7 +168,12 @@ jobs:
           git push --force origin "refs/tags/$TAG"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" --latest
+            # A previous failed/manual run may have left this reusable release as
+            # a draft or prerelease. GitHub rejects marking those releases as
+            # latest, so first publish/promote it as a normal release, then make
+            # a second API call to mark it latest.
+            gh release edit "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" --draft=false --prerelease=false
+            gh release edit "$TAG" --latest
           else
             gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes "$NOTES" --latest
           fi
