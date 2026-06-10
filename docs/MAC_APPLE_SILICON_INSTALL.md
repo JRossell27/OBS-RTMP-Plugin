@@ -5,6 +5,13 @@ Use this guide if your Mac has an Apple Silicon chip, such as an M1, M2, M3, or 
 ## Download the Mac plugin ZIP from GitHub
 
 1. Open this repository on GitHub.
+2. Click **Releases**.
+3. Open **Latest Apple Silicon OBS RTMP Receiver Plugin**.
+4. Download `obs-rtmp-receiver-macos-arm64.zip`.
+5. Unzip the downloaded file.
+6. Open `INSTALL.txt` inside the ZIP and follow it.
+
+If the release is not there yet, click **Actions**, run **Build Mac Apple Silicon OBS plugin**, wait for the green check mark, and then return to **Releases**.
 2. Click **Actions**.
 3. Click **Build downloadable OBS plugin**.
 4. Open the newest successful run with a green check mark.

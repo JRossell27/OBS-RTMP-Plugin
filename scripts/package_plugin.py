@@ -128,6 +128,7 @@ def main() -> None:
     copy_if_exists(Path("README.md"), staging_root / "README.md")
     copy_if_exists(Path("docs/NON_CODER_SETUP.md"), staging_root / "docs" / "NON_CODER_SETUP.md")
     copy_if_exists(Path("docs/DOWNLOAD_PLUGIN_FROM_GITHUB.md"), staging_root / "docs" / "DOWNLOAD_PLUGIN_FROM_GITHUB.md")
+    copy_if_exists(Path("docs/MAC_APPLE_SILICON_INSTALL.md"), staging_root / "docs" / "MAC_APPLE_SILICON_INSTALL.md")
     shutil.copy2(plugin_binary, binary_destination)
 
     copy_if_exists(Path("README.md"), staging_root / "README.md")
