@@ -42,6 +42,48 @@ If the release is not there yet, click **Actions**, run **Build Mac Apple Silico
 8. Reopen OBS.
 9. Add a source named **RTMP Receiver (FFmpeg)**.
 
+
+## If OBS says the plugin failed to load
+
+If OBS shows this startup warning:
+
+```text
+The following OBS plugins failed to load:
+
+obs-rtmp-receiver
+obs-rtmp-receiver
+```
+
+Start by removing duplicate copies. Seeing the same plugin name twice usually means OBS found more than one installed copy, such as one copy in your user plugin folder and another copy inside the OBS app/plugin folder, or an accidentally nested duplicate from unzipping/copying more than once.
+
+1. Close OBS.
+2. In Finder, press **Shift+Command+G** and inspect this folder:
+
+```text
+~/Library/Application Support/obs-studio/plugins/
+```
+
+3. Keep only one `obs-rtmp-receiver` folder there. The only expected user-plugin path is:
+
+```text
+~/Library/Application Support/obs-studio/plugins/obs-rtmp-receiver/bin/obs-rtmp-receiver.plugin
+```
+
+4. Also check that you did not create a nested duplicate like:
+
+```text
+~/Library/Application Support/obs-studio/plugins/obs-rtmp-receiver/obs-rtmp-receiver/bin/obs-rtmp-receiver.plugin
+```
+
+5. If you also copied `obs-rtmp-receiver.plugin` into OBS.app itself, remove that extra copy and use the per-user plugin folder above instead.
+6. Reopen OBS and check **Help** → **Log Files** → **View Current Log**. Search the log for `obs-rtmp-receiver`; the lines near that name usually say whether macOS blocked the plugin, the architecture is wrong, or a linked library could not be loaded.
+
+Other common causes:
+
+- The downloadable ZIP is for Apple Silicon only. It will not load in Intel OBS or on an Intel Mac.
+- Make sure you are running the normal Apple Silicon OBS app, not an Intel/Rosetta copy.
+- If macOS quarantined or blocked the plugin, open **System Settings** → **Privacy & Security**, allow the blocked OBS/plugin item, and restart OBS.
+
 ## Install FFmpeg on Mac
 
 The plugin starts FFmpeg for you, but FFmpeg must still be installed on your Mac.

@@ -68,6 +68,8 @@ It still requires FFmpeg to be installed on the computer running OBS.
 {install_instructions(platform)}
 IMPORTANT
 - If OBS does not show the source, check OBS logs for missing libraries.
+- If OBS says `obs-rtmp-receiver` failed to load twice, close OBS and remove duplicate installed copies. Keep only:
+  ~/Library/Application Support/obs-studio/plugins/obs-rtmp-receiver/bin/obs-rtmp-receiver.plugin
 - The plugin starts FFmpeg for you, but FFmpeg must be installed and available as `ffmpeg` on PATH, or configured in the source properties.
 - For internet guests, you still need firewall/router port forwarding for your RTMP port.
 
