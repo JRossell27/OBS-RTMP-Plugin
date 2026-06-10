@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(GNUInstallDirs)
 
-set(LIBOBS_INCLUDE_DIR "" CACHE PATH "Path to OBS/libobs headers, for example OBS.app/Contents/Frameworks/libobs.framework/Headers")
+set(LIBOBS_INCLUDE_DIR "" CACHE STRING "Semicolon-separated paths to OBS/libobs headers, for example OBS.app/Contents/Frameworks/libobs.framework/Headers")
 set(LIBOBS_LIBRARY "" CACHE FILEPATH "Path to the libobs library or framework binary")
 set(SIMDE_INCLUDE_DIR "" CACHE PATH "Path to SIMDe headers containing simde/x86/sse2.h; needed by recent OBS/libobs headers on Apple Silicon")
 
@@ -33,7 +33,13 @@ else()
 endif()
 
 if(LIBOBS_INCLUDE_DIR AND LIBOBS_LIBRARY)
-  target_include_directories(obs-rtmp-receiver PRIVATE "${LIBOBS_INCLUDE_DIR}")
+  foreach(LIBOBS_INCLUDE_PATH IN LISTS LIBOBS_INCLUDE_DIR)
+    if(NOT IS_DIRECTORY "${LIBOBS_INCLUDE_PATH}")
+      message(FATAL_ERROR "LIBOBS_INCLUDE_DIR entry does not exist: ${LIBOBS_INCLUDE_PATH}")
+    endif()
+  endforeach()
+
+  target_include_directories(obs-rtmp-receiver PRIVATE ${LIBOBS_INCLUDE_DIR})
   target_link_libraries(obs-rtmp-receiver PRIVATE "${LIBOBS_LIBRARY}")
 else()
   find_package(libobs QUIET)
