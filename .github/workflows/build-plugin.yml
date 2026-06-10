@@ -1,0 +1,247 @@
+name: Apple Silicon Plugin Release
+name: Build Mac Apple Silicon OBS plugin
+name: Build downloadable OBS plugin
+
+permissions:
+  contents: write
+
+"on":
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_macos_arm64:
+    runs-on: macos-14
+    timeout-minutes: 45
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  macos-arm64:
+    name: Build Apple Silicon download ZIP
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  linux-x86_64:
+    name: Linux x86_64 plugin ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install OBS build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ ninja-build libobs-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PWD/package-root"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Install into package folder
+        run: cmake --install build --config Release
+
+      - name: Package downloadable ZIP
+        run: python3 scripts/package_plugin.py --package-root package-root --output-dir dist --platform linux-x86_64
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-rtmp-receiver-linux-x86_64
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Attach ZIP to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+
+  macos-arm64:
+    name: macOS Apple Silicon plugin ZIP
+    runs-on: macos-14
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install CMake, Ninja, and OBS
+        run: |
+          set -euo pipefail
+      - name: Install build tools and OBS
+        run: |
+          brew install cmake ninja
+          brew install --cask obs
+
+      - name: Locate OBS app and libobs framework
+        id: obs
+        run: |
+          set -euo pipefail
+          OBS_APP="/Applications/OBS.app"
+          if [ ! -d "$OBS_APP" ]; then
+            echo "OBS.app was not installed at $OBS_APP" >&2
+            find /Applications -maxdepth 2 -iname '*OBS*' -print >&2 || true
+            exit 1
+          fi
+
+          OBS_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$OBS_APP/Contents/Info.plist")"
+          LIBOBS_FRAMEWORK="$(find "$OBS_APP/Contents/Frameworks" -type d -name 'libobs.framework' -print -quit)"
+          if [ -z "$LIBOBS_FRAMEWORK" ]; then
+            echo "Could not find libobs.framework inside $OBS_APP" >&2
+            find "$OBS_APP/Contents/Frameworks" -maxdepth 4 -name 'libobs*' -print >&2 || true
+            exit 1
+          fi
+
+          LIBOBS_BINARY="$(find "$LIBOBS_FRAMEWORK" -type f -name libobs -print -quit)"
+          if [ -z "$LIBOBS_BINARY" ]; then
+            echo "Could not find libobs binary inside $LIBOBS_FRAMEWORK" >&2
+            find "$LIBOBS_FRAMEWORK" -maxdepth 4 -print >&2 || true
+            exit 1
+          fi
+
+          echo "version=$OBS_VERSION" >> "$GITHUB_OUTPUT"
+          echo "library=$LIBOBS_BINARY" >> "$GITHUB_OUTPUT"
+
+      - name: Download matching OBS headers
+        id: headers
+        run: |
+          set -euo pipefail
+          OBS_VERSION="${{ steps.obs.outputs.version }}"
+          HEADER_ROOT="$RUNNER_TEMP/obs-studio-$OBS_VERSION"
+          ARCHIVE="$RUNNER_TEMP/obs-studio-$OBS_VERSION.tar.gz"
+
+          curl --fail --location --retry 3 \
+            "https://github.com/obsproject/obs-studio/archive/refs/tags/$OBS_VERSION.tar.gz" \
+            --output "$ARCHIVE"
+          mkdir -p "$HEADER_ROOT"
+          tar -xzf "$ARCHIVE" --strip-components=1 -C "$HEADER_ROOT"
+
+          if [ ! -f "$HEADER_ROOT/libobs/obs-module.h" ]; then
+            echo "Downloaded OBS source does not contain libobs/obs-module.h" >&2
+            find "$HEADER_ROOT" -maxdepth 3 -name obs-module.h -print >&2 || true
+            exit 1
+          fi
+
+          echo "include_dir=$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Apple Silicon build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_INSTALL_PREFIX="$PWD/package-root" \
+            -DLIBOBS_INCLUDE_DIR="${{ steps.headers.outputs.include_dir }}" \
+            -DLIBOBS_LIBRARY="${{ steps.obs.outputs.library }}"
+
+      - name: Build plugin
+        run: cmake --build build --config Release
+
+      - name: Install plugin into package folder
+      - name: Locate OBS libobs framework
+        id: obs
+        run: |
+          OBS_APP="/Applications/OBS.app"
+          LIBOBS_HEADER="$(find "$OBS_APP/Contents/Frameworks/libobs.framework" -name obs-module.h -print -quit)"
+          LIBOBS_BINARY="$(find "$OBS_APP/Contents/Frameworks/libobs.framework" -type f -name libobs -print -quit)"
+          if [ -z "$LIBOBS_HEADER" ] || [ -z "$LIBOBS_BINARY" ]; then
+            echo "Could not find libobs headers/library inside $OBS_APP" >&2
+            find "$OBS_APP/Contents/Frameworks" -maxdepth 4 -name 'libobs*' -o -name 'obs-module.h' >&2 || true
+            exit 1
+          fi
+          echo "include_dir=$(dirname "$LIBOBS_HEADER")" >> "$GITHUB_OUTPUT"
+          echo "library=$LIBOBS_BINARY" >> "$GITHUB_OUTPUT"
+
+      - name: Configure for Apple Silicon
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES=arm64
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+          -DCMAKE_INSTALL_PREFIX="$PWD/package-root"
+          -DLIBOBS_INCLUDE_DIR="${{ steps.headers.outputs.include_dir }}"
+          -DLIBOBS_INCLUDE_DIR="${{ steps.obs.outputs.include_dir }}"
+          -DLIBOBS_LIBRARY="${{ steps.obs.outputs.library }}"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Install into package folder
+        run: cmake --install build --config Release
+
+      - name: Ad-hoc sign installed plugin bundle
+        run: |
+          set -euo pipefail
+          PLUGIN_BUNDLE="$(find package-root -type d -name 'obs-rtmp-receiver.plugin' -print -quit)"
+          if [ -z "$PLUGIN_BUNDLE" ]; then
+            echo "Could not find installed obs-rtmp-receiver.plugin bundle" >&2
+            find package-root -maxdepth 5 -print >&2 || true
+            exit 1
+          fi
+          codesign --force --deep --sign - "$PLUGIN_BUNDLE"
+
+      - name: Package downloadable ZIP
+        run: python3 scripts/package_plugin.py --package-root package-root --output-dir dist --platform macos-arm64
+
+      - name: Verify downloadable ZIP
+      - name: Verify packaged ZIP exists
+        run: |
+          set -euo pipefail
+          test -f dist/obs-rtmp-receiver-macos-arm64.zip
+          unzip -l dist/obs-rtmp-receiver-macos-arm64.zip
+
+      - name: Ad-hoc sign plugin bundle
+        run: codesign --force --deep --sign - build/obs-rtmp-receiver.plugin
+
+      - name: Install into package folder
+        run: cmake --install build --config Release
+
+      - name: Package downloadable ZIP
+        run: python3 scripts/package_plugin.py --package-root package-root --output-dir dist --platform macos-arm64
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-rtmp-receiver-macos-arm64
+          path: dist/obs-rtmp-receiver-macos-arm64.zip
+          if-no-files-found: error
+
+      - name: Publish ZIP to GitHub Releases
+      - name: Publish ZIP to GitHub Releases page
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="apple-silicon-latest"
+          TITLE="Latest Apple Silicon OBS RTMP Receiver Plugin"
+          NOTES="Download obs-rtmp-receiver-macos-arm64.zip below, unzip it, and follow INSTALL.txt. This build is for Apple Silicon Macs only (M1/M2/M3/M4)."
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease --latest=false
+          else
+            gh release create "$TAG" --title "$TITLE" --notes "$NOTES" --prerelease --latest=false
+          fi
+
+          gh release upload "$TAG" dist/obs-rtmp-receiver-macos-arm64.zip --clobber
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Attach ZIP to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
