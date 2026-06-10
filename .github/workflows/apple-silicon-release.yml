@@ -23,12 +23,24 @@ jobs:
       - name: Install CMake, Ninja, and OBS
         run: |
           set -euo pipefail
-          # GitHub macOS runners currently include several pre-tapped third-party
-          # repositories that are unrelated to this build. Remove them before
-          # installing anything so Homebrew tap-trust checks cannot fail the job.
-          brew untap aws/tap azure/bicep || true
-          brew install cmake ninja
-          brew install --cask obs
+
+          # GitHub macOS runners can include preinstalled formulae and pre-tapped
+          # third-party repositories. Avoid `brew untap` here: Homebrew refuses to
+          # untap repositories that own installed packages (for example bicep from
+          # azure/bicep), and that refusal is surfaced as a workflow error.
+          for formula in cmake ninja; do
+            if brew list --formula "$formula" >/dev/null 2>&1; then
+              echo "$formula is already installed; skipping brew install."
+            else
+              brew install "$formula"
+            fi
+          done
+
+          if [ -d /Applications/OBS.app ] || brew list --cask obs >/dev/null 2>&1; then
+            echo "OBS is already installed; skipping brew cask install."
+          else
+            brew install --cask obs
+          fi
 
       - name: Locate OBS app and libobs framework
         id: obs
