@@ -10,6 +10,7 @@ include(GNUInstallDirs)
 
 set(LIBOBS_INCLUDE_DIR "" CACHE PATH "Path to OBS/libobs headers, for example OBS.app/Contents/Frameworks/libobs.framework/Headers")
 set(LIBOBS_LIBRARY "" CACHE FILEPATH "Path to the libobs library or framework binary")
+set(SIMDE_INCLUDE_DIR "" CACHE PATH "Path to SIMDe headers containing simde/x86/sse2.h; needed by recent OBS/libobs headers on Apple Silicon")
 
 add_library(obs-rtmp-receiver MODULE
   src/plugin-main.cpp
@@ -17,6 +18,18 @@ add_library(obs-rtmp-receiver MODULE
 
 if((LIBOBS_INCLUDE_DIR AND NOT LIBOBS_LIBRARY) OR (LIBOBS_LIBRARY AND NOT LIBOBS_INCLUDE_DIR))
   message(FATAL_ERROR "LIBOBS_INCLUDE_DIR and LIBOBS_LIBRARY must be provided together, or neither should be provided.")
+endif()
+
+if(SIMDE_INCLUDE_DIR)
+  if(NOT EXISTS "${SIMDE_INCLUDE_DIR}/simde/x86/sse2.h")
+    message(FATAL_ERROR "SIMDE_INCLUDE_DIR must contain simde/x86/sse2.h")
+  endif()
+  target_include_directories(obs-rtmp-receiver PRIVATE "${SIMDE_INCLUDE_DIR}")
+else()
+  find_path(SIMDE_INCLUDE_DIR_AUTO simde/x86/sse2.h)
+  if(SIMDE_INCLUDE_DIR_AUTO)
+    target_include_directories(obs-rtmp-receiver PRIVATE "${SIMDE_INCLUDE_DIR_AUTO}")
+  endif()
 endif()
 
 if(LIBOBS_INCLUDE_DIR AND LIBOBS_LIBRARY)
