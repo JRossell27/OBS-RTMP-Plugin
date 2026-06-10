@@ -5,6 +5,12 @@ name: Apple Silicon Plugin Release
 permissions:
   contents: write
 
+env:
+  # OBS 32.0.4 is the oldest macOS 32.x build we currently target.
+  # Building against this SDK keeps the plugin loadable for users still on
+  # OBS 32.0.x; OBS rejects plugins built with a newer libobs API.
+  OBS_SDK_VERSION: "32.0.4"
+
 "on":
   workflow_dispatch:
   push:
@@ -20,7 +26,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
 
-      - name: Install CMake, Ninja, and OBS
+      - name: Install CMake, Ninja, and SIMDe
         run: |
           set -euo pipefail
 
@@ -36,24 +42,44 @@ jobs:
             fi
           done
 
-          if [ -d /Applications/OBS.app ] || brew list --cask obs >/dev/null 2>&1; then
-            echo "OBS is already installed; skipping brew cask install."
-          else
-            brew install --cask obs
+      - name: Download pinned OBS SDK app
+        id: obs_app
+        run: |
+          set -euo pipefail
+          DMG_URL="https://github.com/obsproject/obs-studio/releases/download/$OBS_SDK_VERSION/OBS-Studio-$OBS_SDK_VERSION-macOS-Apple.dmg"
+          DMG_PATH="$RUNNER_TEMP/OBS-Studio-$OBS_SDK_VERSION-macOS-Apple.dmg"
+          MOUNT_POINT="$RUNNER_TEMP/obs-sdk-$OBS_SDK_VERSION"
+
+          curl --fail --location --retry 3 "$DMG_URL" --output "$DMG_PATH"
+          mkdir -p "$MOUNT_POINT"
+          hdiutil attach "$DMG_PATH" -mountpoint "$MOUNT_POINT" -nobrowse -readonly
+
+          OBS_APP="$(find "$MOUNT_POINT" -maxdepth 2 -type d -name 'OBS.app' -print -quit)"
+          if [ -z "$OBS_APP" ]; then
+            echo "OBS.app was not found in $DMG_PATH" >&2
+            find "$MOUNT_POINT" -maxdepth 3 -print >&2 || true
+            exit 1
           fi
+
+          echo "app=$OBS_APP" >> "$GITHUB_OUTPUT"
+          echo "mount_point=$MOUNT_POINT" >> "$GITHUB_OUTPUT"
 
       - name: Locate OBS app and libobs framework
         id: obs
         run: |
           set -euo pipefail
-          OBS_APP="/Applications/OBS.app"
+          OBS_APP="${{ steps.obs_app.outputs.app }}"
           if [ ! -d "$OBS_APP" ]; then
-            echo "OBS.app was not installed at $OBS_APP" >&2
-            find /Applications -maxdepth 2 -iname '*OBS*' -print >&2 || true
+            echo "OBS.app was not found at $OBS_APP" >&2
             exit 1
           fi
 
           OBS_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$OBS_APP/Contents/Info.plist")"
+          if [ "$OBS_VERSION" != "$OBS_SDK_VERSION" ]; then
+            echo "Expected OBS $OBS_SDK_VERSION but mounted OBS $OBS_VERSION" >&2
+            exit 1
+          fi
+
           LIBOBS_FRAMEWORK="$(find "$OBS_APP/Contents/Frameworks" -type d -name 'libobs.framework' -print -quit)"
           if [ -z "$LIBOBS_FRAMEWORK" ]; then
             echo "Could not find libobs.framework inside $OBS_APP" >&2
@@ -98,8 +124,8 @@ jobs:
             exit 1
           fi
 
-          # Homebrew's OBS.app is enough for the libobs binary, but it is not a
-          # complete plugin-development SDK. The downloaded source headers can
+          # The pinned OBS.app provides the matching libobs binary, but it is not
+          # a complete plugin-development SDK. The downloaded source headers can
           # also omit generated build headers such as obsconfig.h, so CMake
           # creates a minimal compatibility header for this external plugin.
           echo "include_dir=$HEADER_ROOT/libobs" >> "$GITHUB_OUTPUT"
@@ -159,7 +185,7 @@ jobs:
           set -euo pipefail
           TAG="apple-silicon-latest"
           TITLE="Latest Apple Silicon OBS RTMP Receiver Plugin"
-          NOTES="Download obs-rtmp-receiver-macos-arm64.zip below, unzip it, and follow INSTALL.txt. This build is for Apple Silicon Macs only (M1/M2/M3/M4)."
+          NOTES="Download obs-rtmp-receiver-macos-arm64.zip below, unzip it, and follow INSTALL.txt. This build is for Apple Silicon Macs only (M1/M2/M3/M4). It is built against OBS $OBS_SDK_VERSION so OBS 32.0.x users are not blocked by the newer-libobs plugin check."
 
           # Keep the reusable release tag pointed at the commit that produced the
           # current binary, then publish the release as the repository's latest
@@ -179,6 +205,15 @@ jobs:
           fi
 
           gh release upload "$TAG" dist/obs-rtmp-receiver-macos-arm64.zip --clobber
+
+      - name: Unmount pinned OBS SDK app
+        if: always()
+        run: |
+          set -euo pipefail
+          MOUNT_POINT="${{ steps.obs_app.outputs.mount_point }}"
+          if [ -n "$MOUNT_POINT" ] && mount | grep -F " on $MOUNT_POINT " >/dev/null 2>&1; then
+            hdiutil detach "$MOUNT_POINT"
+          fi
 
       - name: Print download links
         env:
