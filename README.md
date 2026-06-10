@@ -12,6 +12,13 @@ The plugin creates a source named **RTMP Receiver (FFmpeg)**. When the source be
 - Receives the outside feed in OBS so you can mix it into scenes and stream onward to social channels.
 - Uses only free/open-source components: OBS Studio and FFmpeg.
 
+
+## New to plugins or coding?
+
+If you are not used to building OBS plugins, start with the non-coder guide. It explains what this repository is, how to test the same RTMP receiving workflow immediately with FFmpeg, and what still has to happen before OBS can load this code as an installed plugin.
+
+See: [`docs/NON_CODER_SETUP.md`](docs/NON_CODER_SETUP.md)
+
 ## Requirements
 
 - OBS Studio with plugin development headers available at build time.
